@@ -1,5 +1,7 @@
 #Magic Tabs
 
+Demo: http://luke.sno.wden.co.uk/jquery-magic-tabs
+
 Really cant get much more simpler than this...
 
 ```javascript
