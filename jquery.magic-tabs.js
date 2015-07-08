@@ -14,6 +14,18 @@
 		var opts = $.extend({
 
 			/**
+			 * [opOnLoad description]
+			 * @type {Number}
+			 */
+			openOnLoad : 1,
+
+			/**
+			 * [hashTrail description]
+			 * @type {Boolean}
+			 */
+			hashTrail : false,
+
+			/**
 			 * the selector for the accordion header tab
 			 * @type {String}
 			 */
@@ -72,6 +84,12 @@
 			 */
 
 			var tabs;
+
+			/**
+			 * [allowHashChange description]
+			 * @type {Boolean}
+			 */
+			var allowHashChange = true;
 
 			/**
 			 * [createdEvent description]
@@ -195,6 +213,13 @@
 				tabs.append( tabContents );
 
 				tabs.insertAfter( jq );
+				$('*', jq).each(function(){
+					if( $(this).attr('id') !== undefined ) {
+						if( ! $(this).attr('id').match( /^magic_/ ) ) {
+							$(this).attr('id', 'magic_' + $(this).attr('id'));
+						}
+					}
+				});
 				$( '.' + opts.bodyClass, tabs ).not(':eq(0)').hide();
 				$( '.' + opts.bodyClass, tabs ).eq(0).addClass( opts.activeClass );
 				$( '.' + opts.headClass, tabs ).eq(0).addClass( opts.activeClass );
@@ -211,6 +236,12 @@
 			var bindEvents = function() {
 
 				$( '.' + opts.headClass, tabs ).unbind( 'click.magic-tabs' ).bind( 'click.magic-tabs', function(e) {
+
+					if( opts.hashTrail ) {
+						allowHashChange = false;
+						var index = $(this).index();
+						window.location.hash = 'slide-' + (index+1);
+					}
 
 					e.preventDefault();
 
@@ -273,9 +304,80 @@
 						open.hide( 0, closedEvent );
 					}
 
+					setTimeout(function(){
+						allowHashChange = true;
+					}, 100);
+
 				});
 
+				if( opts.openOnLoad && getSlideNumberFromHash() === false ) {
+					$( '.' + opts.headClass, tabs ).eq((opts.openOnLoad-1)).trigger('click.magic-tabs');
+				}
+
 			}
+
+			/**
+			 * [getSlideNumberFromHash description]
+			 * @return {[type]} [description]
+			 */
+			var getSlideNumberFromHash = function(){
+				var hash = window.location.hash;
+				if( hash.match( /^#slide-[0-9]\d*/ ) ) {
+					return Number(hash.replace( '#slide-', '' ));
+				}
+				return false;
+			};
+
+			/**
+			 * [detectHash description]
+			 * @return {[type]} [description]
+			 */
+			var detectHash = function(){
+				if( opts.hashTrail && allowHashChange ) {
+					var index = getSlideNumberFromHash();
+					if( index ) {
+						$( '.' + opts.headClass, tabs ).eq(index-1).trigger('click.magic-tabs');
+					}
+				}
+			};
+
+			/**
+			 * [removeHash description]
+			 * @return {[type]} [description]
+			 */
+			var removeHash = function() {
+			    var scrollV, scrollH, loc = window.location;
+			    if ("pushState" in history)
+			        history.pushState("", document.title, loc.pathname + loc.search);
+			    else {
+			        scrollV = document.body.scrollTop;
+			        scrollH = document.body.scrollLeft;
+			        loc.hash = "";
+			        document.body.scrollTop = scrollV;
+			        document.body.scrollLeft = scrollH;
+			    }
+			}
+
+			/**
+			 * [onHashChange description]
+			 * @return {[type]} [description]
+			 */
+			var onHashChange = function() {
+				if( allowHashChange ) {
+					var index = getSlideNumberFromHash();
+					if( index ) {
+						$( '.' + opts.headClass, tabs ).eq(index-1).trigger('click.magic-tabs');
+					}
+				}
+			};
+
+			/**
+			 * [detectHashChange description]
+			 * @return {[type]} [description]
+			 */
+			var detectHashChange = function() {
+				$( window ).bind('hashchange', onHashChange );
+			};
 
 			/**
 			 * [unbind description]
@@ -286,6 +388,11 @@
 				if( ! jq.is( ':visible' ) ) {
 					tabs.remove();
 					jq.show();
+					$('*', jq).each(function(){
+						if( $(this).attr('id') !== undefined ) {
+							$(this).attr('id', $(this).attr('id').replace( /^magic_/, '' ) );
+						}
+					});
 				}
 			};
 
@@ -343,6 +450,8 @@
 			splitContent();
 			generateTabs();
 			bindEvents();
+			detectHash();
+			detectHashChange();
 
 			// may want to add some public methods at some point...
 			jq.data( 'magic-tabs', this );
